@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero BN – Colegio Americano de Barranquilla</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#0A2D73;--amber:#EC8906;--teal:#197AA4;--ocean:#0C6594;--pearl:#F4F5F7;--success:#10B981;--light:#E4EAF4;--gray:#6B7280;--zero:#CBD5E1;--white:#fff;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Tahoma,'Segoe UI',sans-serif;background:var(--pearl);min-height:100vh;}
+
+/* LOGIN */
+.login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0A2D73 0%,#0e3680 55%,#197AA4 100%);padding:24px;}
+.login-card{background:#fff;border-radius:20px;padding:36px 32px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);text-align:center;}
+.login-logo{width:80px;height:80px;object-fit:contain;margin-bottom:16px;}
+.login-card h2{font-size:1.1rem;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.login-card p{font-size:0.78rem;color:var(--gray);margin-bottom:24px;}
+.login-card label{display:block;text-align:left;font-size:0.75rem;font-weight:600;color:var(--navy);margin-bottom:5px;}
+.login-card input{width:100%;border:2px solid var(--light);border-radius:8px;padding:10px 12px;font-size:0.82rem;font-family:Tahoma,sans-serif;outline:none;transition:border-color .2s;margin-bottom:14px;}
+.login-card input:focus{border-color:var(--teal);}
+.login-btn{width:100%;background:var(--navy);color:#fff;border:none;border-radius:8px;padding:12px;font-family:Tahoma,sans-serif;font-weight:700;font-size:0.88rem;cursor:pointer;transition:background .2s;}
+.login-btn:hover{background:var(--teal);}
+.login-error{color:#C0392B;font-size:0.75rem;margin-top:10px;display:none;}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#0A2D73 0%,#0e3680 50%,#197AA4 100%);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
+.header::after{content:'';position:absolute;bottom:-30px;left:35%;width:120px;height:120px;border-radius:50%;background:rgba(236,137,6,0.08);pointer-events:none;}
+.header-left{display:flex;align-items:center;gap:14px;}
+.logo{width:56px;height:56px;object-fit:contain;flex-shrink:0;}
+.header-title h1{font-size:1.1rem;font-weight:700;color:#fff;line-height:1.2;}
+.header-title p{font-size:0.68rem;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:rgba(255,255,255,0.72);border-left:2px solid #EC8906;padding-left:8px;margin-top:4px;}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;z-index:1;}
+.badge{background:#EC8906;color:#0A2D73;font-size:0.65rem;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;}
+.user-pill{background:rgba(255,255,255,0.15);color:#fff;font-size:0.68rem;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:6px;}
+.user-pill span{opacity:0.7;}
+.logout-btn{background:none;border:none;color:rgba(255,255,255,0.6);font-size:0.65rem;cursor:pointer;text-decoration:underline;padding:0;}
+.logout-btn:hover{color:#fff;}
+
+/* READONLY BANNER */
+.readonly-banner{background:linear-gradient(90deg,var(--teal),var(--ocean));color:#fff;text-align:center;padding:8px 24px;font-size:0.75rem;font-weight:600;}
+
+/* PROGRESS BAR */
+.progress-bar{background:#0A2D73;padding:12px 24px;display:flex;align-items:center;gap:16px;}
+.progress-label{color:#fff;font-size:0.8rem;font-weight:700;white-space:nowrap;min-width:140px;}
+.progress-bg{flex:1;height:10px;background:rgba(255,255,255,0.15);border-radius:5px;overflow:hidden;}
+.progress-fill{height:100%;background:linear-gradient(90deg,#EC8906,#f5a623);border-radius:5px;transition:width 1s ease;width:0%;}
+.progress-pct{color:#EC8906;font-weight:700;font-size:1.1rem;min-width:44px;text-align:right;}
+
+/* PHASES STRIP */
+.phases{background:#fff;border-bottom:2px solid var(--light);padding:0 24px;display:flex;align-items:center;overflow-x:auto;}
+.phase-btn{display:flex;align-items:center;gap:6px;padding:12px 14px;border:none;background:none;cursor:pointer;font-family:Tahoma,sans-serif;font-weight:700;font-size:0.72rem;color:var(--gray);border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;}
+.phase-btn:hover{color:var(--navy);}
+.phase-btn.active{color:var(--teal);border-bottom-color:var(--teal);}
+.phase-btn.done{color:var(--success);}
+.phase-num{width:20px;height:20px;border-radius:50%;background:var(--light);color:var(--gray);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:800;flex-shrink:0;transition:all .2s;}
+.phase-btn.active .phase-num{background:var(--navy);color:#fff;}
+.phase-btn.done .phase-num{background:var(--success);color:#fff;}
+.phase-arrow{color:var(--zero);padding:0 2px;font-size:0.9rem;}
+.phase-hint{margin-left:auto;font-size:0.65rem;color:var(--gray);padding:0 8px;white-space:nowrap;}
+
+/* CONTENT */
+.content{padding:20px 24px;}
+.note{background:linear-gradient(135deg,#eef3fb,#dce8f5);border-left:4px solid var(--teal);border-radius:10px;padding:12px 16px;font-size:0.75rem;color:#0d3a60;line-height:1.6;margin-bottom:20px;}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+.stat{background:#fff;border-radius:12px;padding:14px;box-shadow:0 2px 6px rgba(0,0,51,0.06);border-left:4px solid var(--light);display:flex;flex-direction:column;gap:6px;}
+.stat.s-navy{border-left-color:var(--navy);}
+.stat.s-green{border-left-color:var(--success);}
+.stat.s-amber{border-left-color:var(--amber);}
+.stat.s-red{border-left-color:#C0392B;}
+.stat-icon{font-size:1.3rem;}
+.stat-val{font-size:1.8rem;font-weight:700;color:var(--navy);line-height:1;}
+.stat-lbl{font-size:0.65rem;color:var(--gray);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;}
+
+/* SECTION TITLE */
+.section-title{font-weight:700;font-size:0.9rem;color:var(--navy);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,#EC8906,transparent);border-radius:2px;}
+
+/* TIMELINE */
+.timeline-wrap{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 6px rgba(0,0,51,0.05);margin-bottom:20px;overflow-x:auto;}
+.timeline{display:flex;position:relative;min-width:500px;}
+.timeline::before{content:'';position:absolute;top:26px;left:26px;right:26px;height:3px;background:var(--light);z-index:0;}
+.tl-line{position:absolute;top:26px;left:26px;height:3px;background:linear-gradient(90deg,var(--navy),var(--teal));z-index:1;border-radius:2px;transition:width 1s ease;width:0%;}
+.tl-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:2;}
+.tl-dot{width:52px;height:52px;border-radius:50%;background:var(--light);border:3px solid #fff;box-shadow:0 0 0 3px var(--light);display:flex;align-items:center;justify-content:center;font-size:1.3rem;cursor:pointer;transition:transform .2s,box-shadow .2s;}
+.tl-dot:hover{transform:scale(1.12);box-shadow:0 0 0 5px rgba(25,122,164,0.2);}
+.tl-dot.active{background:var(--amber);box-shadow:0 0 0 4px rgba(236,137,6,0.3);animation:pulse 2s infinite;}
+.tl-dot.done{background:var(--navy);box-shadow:0 0 0 3px rgba(10,45,115,0.2);}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 4px rgba(236,137,6,0.3);}50%{box-shadow:0 0 0 8px rgba(236,137,6,0.1);}}
+.tl-label{font-size:0.68rem;font-weight:700;color:var(--gray);text-align:center;line-height:1.3;}
+.tl-label.active{color:var(--amber);}
+.tl-label.done{color:var(--navy);}
+
+/* DRAWER */
+.drawer{background:var(--navy);border-radius:14px;margin-bottom:20px;padding:18px 20px;position:relative;display:none;animation:drawIn .25s ease;}
+.drawer.open{display:block;}
+@keyframes drawIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+.drawer-close{position:absolute;top:12px;right:14px;background:rgba(255,255,255,0.12);border:none;color:#fff;width:26px;height:26px;border-radius:50%;font-size:0.85rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.drawer-close:hover{background:rgba(255,255,255,0.22);}
+.drawer-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.12);}
+.drawer-icon{font-size:1.7rem;flex-shrink:0;}
+.drawer-title{font-weight:700;font-size:0.92rem;color:#fff;margin-bottom:3px;}
+.drawer-obj{font-size:0.73rem;color:rgba(255,255,255,0.7);line-height:1.5;}
+.drawer-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.drawer-col-title{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+.drawer-col-title.act{color:#6dd5ed;}
+.drawer-col-title.del{color:var(--amber);}
+.check-list{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.check-item{display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:rgba(255,255,255,0.07);border-radius:7px;border:1px solid transparent;transition:background .15s,border-color .15s;user-select:none;}
+.check-item.editable{cursor:pointer;}
+.check-item.editable:hover{background:rgba(255,255,255,0.13);border-color:rgba(236,137,6,0.3);}
+.check-item.checked{background:rgba(16,185,129,0.14);border-color:rgba(16,185,129,0.28);}
+.check-item.del-item.checked{background:rgba(236,137,6,0.14);border-color:rgba(236,137,6,0.28);}
+.cb{flex-shrink:0;width:18px;height:18px;border-radius:4px;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;color:#fff;margin-top:1px;transition:all .2s;}
+.check-item.checked .cb{background:var(--success);border-color:var(--success);}
+.check-item.del-item .cb{border-color:rgba(236,137,6,0.5);}
+.check-item.del-item.checked .cb{background:var(--amber);border-color:var(--amber);}
+.check-text{font-size:0.72rem;color:rgba(255,255,255,0.88);line-height:1.45;}
+.check-item.checked .check-text{text-decoration:line-through;color:rgba(255,255,255,0.38);}
+.readonly-note{font-size:0.68rem;color:rgba(255,255,255,0.45);margin-top:12px;text-align:center;font-style:italic;}
+
+/* REQUIREMENTS GRID */
+.req-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:24px;}
+.req-card{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,51,0.05);border:2px solid var(--light);transition:border-color .2s,box-shadow .2s;}
+.req-card.editable{cursor:pointer;}
+.req-card.editable:hover{border-color:var(--teal);box-shadow:0 4px 14px rgba(25,122,164,0.12);}
+.req-card.done{border-color:#D1FAE5;background:#F0FDF4;}
+.req-card.progress{border-color:#FEF3C7;background:#FFFBEB;}
+.req-header{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;}
+.req-name{font-weight:700;font-size:0.82rem;color:var(--navy);line-height:1.3;margin-bottom:3px;}
+.req-sub{font-size:0.69rem;color:var(--gray);line-height:1.35;}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:8px;}
+.chip-pending{background:#E2E8F0;color:#64748B;}
+.chip-progress{background:#FEF3C7;color:#7a4500;}
+.chip-done{background:#D1FAE5;color:#065F46;}
+.pbar-bg{height:7px;background:var(--light);border-radius:4px;overflow:hidden;margin:6px 0;}
+.pbar-fill{height:100%;border-radius:4px;transition:width 1s ease;}
+.fill-done{background:var(--success);}
+.fill-progress{background:var(--amber);}
+.fill-pending{background:var(--zero);}
+.req-foot{display:flex;justify-content:space-between;font-size:0.67rem;}
+.req-obs{margin-top:7px;padding:7px;background:var(--light);border-radius:6px;font-size:0.68rem;color:var(--gray);}
+
+/* TEACHER */
+.teacher{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 6px rgba(0,0,51,0.05);margin-bottom:20px;}
+.level-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.level-lbl{font-size:0.75rem;font-weight:600;min-width:52px;}
+.level-bg{flex:1;height:9px;background:var(--light);border-radius:5px;overflow:hidden;}
+.level-fill{height:100%;border-radius:5px;transition:width 1s ease;}
+.level-cnt{font-size:0.75rem;font-weight:700;min-width:40px;text-align:right;color:var(--gray);}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;border-radius:18px;padding:28px;max-width:520px;width:93%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.22);animation:modalIn .25s ease;}
+@keyframes modalIn{from{opacity:0;transform:translateY(16px) scale(.97);}to{opacity:1;transform:none;}}
+.modal h3{font-size:1rem;font-weight:700;color:var(--navy);margin-bottom:3px;}
+.modal .sub{font-size:0.75rem;color:var(--gray);margin-bottom:12px;}
+.desc-box{background:var(--light);border-radius:9px;padding:12px 14px;border-left:4px solid var(--teal);margin-bottom:14px;}
+.desc-box h4{font-size:0.7rem;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:5px;}
+.desc-box p{font-size:0.74rem;color:#374151;line-height:1.55;}
+.desc-items{list-style:none;margin-top:7px;}
+.desc-items li{font-size:0.72rem;color:#374151;padding:3px 0 3px 16px;position:relative;line-height:1.45;}
+.desc-items li::before{content:'→';position:absolute;left:0;color:var(--teal);font-weight:700;}
+.modal label{font-size:0.74rem;font-weight:600;color:var(--navy);display:block;margin:12px 0 5px;}
+.modal select,.modal textarea{width:100%;border:2px solid var(--light);border-radius:7px;padding:8px 10px;font-size:0.75rem;font-family:Tahoma,sans-serif;color:#1e293b;outline:none;transition:border-color .2s;}
+.modal select:focus,.modal textarea:focus{border-color:var(--teal);}
+.modal-btns{display:flex;gap:8px;margin-top:18px;}
+.btn-save{flex:1;background:var(--navy);color:#fff;border:none;border-radius:7px;padding:10px;font-family:Tahoma,sans-serif;font-weight:700;font-size:0.78rem;cursor:pointer;transition:background .2s;}
+.btn-save:hover{background:var(--teal);}
+.btn-cancel{padding:10px 16px;background:var(--light);border:none;border-radius:7px;font-family:Tahoma,sans-serif;font-weight:700;font-size:0.78rem;color:var(--gray);cursor:pointer;}
+
+/* FOOTER */
+.footer{background:var(--navy);color:#fff;text-align:center;padding:14px 24px;font-size:0.67rem;line-height:1.9;border-top:3px solid var(--amber);}
+
+/* TOAST */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:11px 24px;border-radius:28px;font-weight:700;font-size:0.8rem;box-shadow:0 6px 20px rgba(0,0,0,0.3);z-index:999;opacity:0;transition:opacity .35s;pointer-events:none;border:2px solid var(--amber);white-space:nowrap;}
+#toast.show{opacity:1;}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--pearl);}
+.spinner{width:40px;height:40px;border:4px solid var(--light);border-top-color:var(--navy);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+@media(max-width:600px){
+.stats{grid-template-columns:repeat(2,1fr);}
+.drawer-cols{grid-template-columns:1fr;}
+.req-grid{grid-template-columns:1fr;}
+.header{flex-direction:column;gap:10px;text-align:center;}
+.content{padding:16px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading" id="loading-screen"><div class="spinner"></div></div>
+
+<!-- LOGIN -->
+<div id="login-screen" style="display:none">
+  <!-- Logo injected by JS -->
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <img id="app-logo" class="logo" alt="CAB"/>
+      <div class="header-title">
+        <h1>Colegio Americano de Barranquilla</h1>
+        <p>Tablero de Control · Denominación Bilingüe Nacional 2026</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="badge">🎯 Meta: BN 2026</div>
+      <div class="user-pill">
+        <span id="user-name-display"></span>
+        <button class="logout-btn" onclick="logout()">Salir</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="readonly-banner" class="readonly-banner" style="display:none">
+    👁️ Modo visualización — Solo Yuddy Pérez puede editar el tablero
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-label">📊 Avance General BN</div>
+    <div class="progress-bg"><div class="progress-fill" id="main-fill"></div></div>
+    <div class="progress-pct" id="main-pct">0%</div>
+  </div>
+
+  <div class="phases">
+    <button class="phase-btn active" onclick="setPhase(0)"><span class="phase-num">1</span>Diagnóstico</button>
+    <span class="phase-arrow">›</span>
+    <button class="phase-btn" onclick="setPhase(1)"><span class="phase-num">2</span>Diseño</button>
+    <span class="phase-arrow">›</span>
+    <button class="phase-btn" onclick="setPhase(2)"><span class="phase-num">3</span>Implementación</button>
+    <span class="phase-arrow">›</span>
+    <button class="phase-btn" onclick="setPhase(3)"><span class="phase-num">4</span>Consolidación</button>
+    <span class="phase-arrow">›</span>
+    <button class="phase-btn" onclick="setPhase(4)"><span class="phase-num">5</span>Radicación</button>
+    <span class="phase-hint">👆 Clic en una etapa para ver sus acciones</span>
+  </div>
+
+  <div class="content">
+    <div class="note">ℹ️ <strong>Inicio del proceso:</strong> Todos los requisitos parten en 0%. Haz clic en los íconos de la ruta para ver y marcar actividades. El avance se sincroniza en tiempo real para todos los usuarios.</div>
+    <div class="stats">
+      <div class="stat s-navy"><div class="stat-icon">📋</div><div class="stat-val">9</div><div class="stat-lbl">Requisitos totales</div></div>
+      <div class="stat s-green"><div class="stat-icon">✅</div><div class="stat-val" id="stat-done">0</div><div class="stat-lbl">Completados</div></div>
+      <div class="stat s-amber"><div class="stat-icon">🔄</div><div class="stat-val" id="stat-prog">0</div><div class="stat-lbl">En progreso</div></div>
+      <div class="stat s-red"><div class="stat-icon">⏳</div><div class="stat-val" id="stat-pend">9</div><div class="stat-lbl">Pendientes</div></div>
+    </div>
+
+    <div class="section-title">🗓️ Ruta de Implementación <span style="font-size:0.65rem;font-weight:400;color:var(--gray);margin-left:6px;">— Clic en cada etapa para ver y marcar sus acciones</span></div>
+    <div class="timeline-wrap">
+      <div class="timeline" id="timeline">
+        <div class="tl-line" id="tl-line"></div>
+        <div class="tl-item"><div class="tl-dot active" id="tl0" onclick="clickTl(0)">🔍</div><div class="tl-label active" id="tll0">Diagnóstico</div></div>
+        <div class="tl-item"><div class="tl-dot" id="tl1" onclick="clickTl(1)">📐</div><div class="tl-label" id="tll1">Diseño</div></div>
+        <div class="tl-item"><div class="tl-dot" id="tl2" onclick="clickTl(2)">🚀</div><div class="tl-label" id="tll2">Implementación</div></div>
+        <div class="tl-item"><div class="tl-dot" id="tl3" onclick="clickTl(3)">📦</div><div class="tl-label" id="tll3">Consolidación</div></div>
+        <div class="tl-item"><div class="tl-dot" id="tl4" onclick="clickTl(4)">🏆</div><div class="tl-label" id="tll4">Radicación BN</div></div>
+      </div>
+    </div>
+
+    <div class="drawer" id="drawer">
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+      <div id="drawer-content"></div>
+    </div>
+
+    <div class="section-title">📌 Requisitos Circular 00009</div>
+    <div class="req-grid" id="req-grid"></div>
+
+    <div class="section-title">👩‍🏫 Mapeo Docente (Proyección)</div>
+    <div class="teacher">
+      <p style="font-size:0.73rem;color:var(--gray);margin-bottom:14px;">Distribución de niveles de lengua esperada al cierre del proceso. Actualmente en diagnóstico.</p>
+      <div class="level-row"><div class="level-lbl" style="color:var(--success)">C1–C2</div><div class="level-bg"><div class="level-fill" id="bar-c1" style="background:var(--success);width:0%"></div></div><div class="level-cnt" id="cnt-c1">0 doc.</div></div>
+      <div class="level-row"><div class="level-lbl" style="color:var(--teal)">B2</div><div class="level-bg"><div class="level-fill" id="bar-b2" style="background:var(--teal);width:0%"></div></div><div class="level-cnt" id="cnt-b2">0 doc.</div></div>
+      <div class="level-row"><div class="level-lbl" style="color:var(--amber)">B1</div><div class="level-bg"><div class="level-fill" id="bar-b1" style="background:var(--amber);width:0%"></div></div><div class="level-cnt" id="cnt-b1">0 doc.</div></div>
+      <div style="margin-top:12px;padding:10px;background:var(--light);border-radius:7px;font-size:0.72rem;color:var(--gray)">📌 <strong>Próximo hito:</strong> Mapeo docente completo al finalizar Fase 1. Se actualizará con datos reales tras el diagnóstico.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>Tablero de Control Bilingüismo &nbsp;·&nbsp; Conforme a la Circular 00009 &nbsp;·&nbsp; Secretaría de Educación de Barranquilla</div>
+    <div>Yuddy Pérez &nbsp;·&nbsp; Líder de Internacionalización y Bilingüismo</div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="modal-overlay" onclick="handleOverlay(event)">
+  <div class="modal">
+    <h3 id="m-title"></h3>
+    <p class="sub" id="m-sub"></p>
+    <div class="desc-box" id="m-desc"></div>
+    <label>Estado del requisito</label>
+    <select id="m-status"><option value="pending">⏳ Pendiente</option><option value="progress">🔄 En progreso</option><option value="done">✅ Completado</option></select>
+    <label>Porcentaje de avance</label>
+    <select id="m-pct"><option value="0">0%</option><option value="10">10%</option><option value="20">20%</option><option value="25">25%</option><option value="30">30%</option><option value="40">40%</option><option value="50">50%</option><option value="60">60%</option><option value="70">70%</option><option value="75">75%</option><option value="80">80%</option><option value="90">90%</option><option value="100">100%</option></select>
+    <label>Observaciones / Evidencias</label>
+    <textarea id="m-obs" rows="3" placeholder="Acciones adelantadas, enlaces, notas de avance..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="saveModal()">💾 Guardar Avance</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://edankmzjsoobkufhtvew.supabase.co';
+const SUPABASE_KEY='sb_publishable_b8dUdG4PvC5miKXlcsUMsw_p06qPWFg';
+const LOGO_B64='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';
+
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser=null;
+let isLider=false;
+let activePhase=0;
+let editingId=null;
+let phaseChecks={};
+
+const PHASES=[
+  {icon:'🔍',name:'Fase 1 – Diagnóstico',obj:'Establecer la línea base institucional, identificar brechas frente a la Circular 00009 e instalar el sistema de gestión del proceso.',
+   act:['Kickoff institucional: presentación del proceso a directivos y equipo','Revisión documental guiada: PEI, plan de inglés, mallas, políticas lingüísticas, evaluación y resultados','Entrevistas y grupos focales con directivos, coordinación y docentes','Observaciones diagnósticas de aula (muestra por niveles y áreas)','Instalación del repositorio de evidencias y matriz de avance BN','Construcción del Plan de Implementación (ruta, metas, responsabilidades e indicadores)'],
+   del:['Informe diagnóstico: brechas, prioridades y riesgos','Plan de implementación con ruta, metas, responsables e indicadores','Matriz de avance BN operativa (checklist de evidencias)','Repositorio de evidencias estructurado (carpetas, nomenclatura, control de versiones)']},
+  {icon:'📐',name:'Fase 2 – Diseño',obj:'Diseñar y ajustar la arquitectura documental del modelo BN: PEI, currículo, evaluación y talento humano.',
+   act:['Análisis técnico del PEI y recomendación de ajustes con enfoque bilingüe','Mapeo docente: nivel de inglés, formación, rol y carga','Proyección del +50% del plan de estudios en inglés','Proyección docente y definición de necesidades de formación','Diseño del PEI / política institucional de bilingüismo','Diseño de mallas curriculares ES/EN y formatos institucionales','Análisis de resultados de examen internacional y plan de preparación','Inicio Ruta 1: uso progresivo del inglés institucional'],
+   del:['PEI con recomendaciones de ajuste + política/lineamientos institucionales','Base consolidada de mapeo docente + proyección docente','Proyección del +50% en inglés (escenario y ruta de transición)','Mallas y documentos curriculares (paquetes por áreas/grados)','Borrador del plan de preparación para examen internacional']},
+  {icon:'🚀',name:'Fase 3 – Implementación',obj:'Implementar de manera acompañada los componentes priorizados y generar evidencia de aula.',
+   act:['Implementación acompañada del currículo en áreas priorizadas','Ruta 1 operativa: uso progresivo del inglés institucional','Ruta 2: talleres CLIL para docentes en transición','Ruta 3 coaching pilotaje: co-planeación, observación y retroalimentación','Consolidación de evidencias de recursos e interculturalidad','Diseño base del sistema de evaluación (rúbricas y criterios)','Reporte ejecutivo de avance BN'],
+   del:['Evidencias de implementación: checklists, productos de aula, planes de mejora','Ruta 1 operativa con evidencias institucionales','Talleres CLIL (Ruta 2) con productos documentados','Informes de coaching del pilotaje (Ruta 3)','Inventario de recursos + portafolio intercultural consolidado','Sistema de evaluación base + borrador de ruta de atención SIEE']},
+  {icon:'📦',name:'Fase 4 – Consolidación',obj:'Consolidar el expediente completo y asegurar coherencia y trazabilidad: dossier audit-ready.',
+   act:['Auditoría interna de cumplimiento (Circular 00009) con checklist final','Curaduría y control de versiones del repositorio','Preparación de soportes de socialización con comunidad educativa','Preparación de carta formal y acta de Consejo Directivo','Simulación de verificación (walkthrough institucional)'],
+   del:['Dossier BN completo: índice, control de versiones, evidencias y anexos','Matriz de avance cerrada (cumplimiento por requisito)','Soportes de socialización: actas, listas, registros','Carta formal + acta de Consejo Directivo listas para radicación','Informe de alistamiento para verificación']},
+  {icon:'🏆',name:'Fase 5 – Radicación y Verificación',obj:'Acompañar técnicamente la radicación y el proceso de verificación oficial.',
+   act:['Validación final de completitud del expediente','Acompañamiento a la radicación formal ante la Secretaría Distrital','Acompañamiento durante la visita de verificación oficial','Elaboración del plan de respuesta a hallazgos','Entrega del informe final de cierre con rutinas y calendario'],
+   del:['Informe de acompañamiento a radicación y verificación','Plan de respuesta a hallazgos + ajustes de cierre','Informe final de cierre y sostenibilidad: rutinas, roles, calendario']}
+];
+
+const REQS=[
+  {id:'pei',icon:'📄',name:'Proyecto Educativo Institucional (PEI)',sub:'Enfoque bilingüe + política institucional articulada con Circular 00009',desc:'El PEI es el documento rector. Para la denominación BN debe reflejar explícitamente el compromiso bilingüe.',items:['Adoptar el enfoque bilingüe como base del modelo educativo, detallando lenguas y niveles MCER.','Incluir política institucional de bilingüismo articulada con la política pública distrital.','Describir la integración del bilingüismo en todos los componentes de gestión.','Actualizar el PEI a la versión exigida por la Circular 00009.'],status:'pending',pct:0,obs:''},
+  {id:'curriculo',icon:'📚',name:'Currículo Bilingüe',sub:'Mallas ES/EN · más del 50% del plan de estudios en inglés',desc:'El currículo bilingüe es el núcleo académico. Debe demostrar que el inglés es lengua de instrucción en más del 50%.',items:['Mallas curriculares por asignatura especificando idioma, objetivos, competencias, metodologías y evaluación.','Mallas de asignaturas en inglés en dos versiones: español e inglés (ES/EN).','Demostrar que más del 50% de las horas de instrucción se imparten en inglés.','Integrar metodologías CLIL/AICLE de manera explícita.'],status:'pending',pct:0,obs:''},
+  {id:'docentes',icon:'👩‍🏫',name:'Docentes y Metodología',sub:'Caracterización docente · niveles B2–C1 certificados · formación CLIL',desc:'Los docentes son el motor del modelo bilingüe. La Circular exige que sean bilingües certificados y capacitados en CLIL.',items:['Caracterización completa: nombres, CC, formación, nivel certificado y experiencia.','Nivel mínimo C1 para docentes de inglés y B2 para docentes de áreas en inglés.','Estrategias metodológicas y evaluativas coherentes con el modelo CLIL.','Estrategias pedagógicas para nivelación lingüística de estudiantes.'],status:'pending',pct:0,obs:''},
+  {id:'evaluacion',icon:'📊',name:'Sistema de Evaluación',sub:'SIEE articulado con modelo bilingüe · ruta de atención y recuperación',desc:'El sistema evaluativo debe estar alineado con el modelo bilingüe y el SIEE vigente.',items:['Articular el SIEE con los criterios del modelo bilingüe.','Diseñar rúbricas y criterios de evaluación bilingüe coherentes con el currículo.','Plan de atención y acompañamiento para estudiantes con necesidades lingüísticas.','Documentar estrategias de recuperación de aprendizajes en contexto bilingüe.'],status:'pending',pct:0,obs:''},
+  {id:'infraestructura',icon:'🏗️',name:'Infraestructura y Recursos',sub:'Inventario de recursos didácticos, tecnológicos y físicos adecuados',desc:'La institución debe contar con recursos materiales y tecnológicos para el modelo bilingüe.',items:['Recursos didácticos en inglés: guías, textos adaptados, materiales audiovisuales.','Plataformas digitales que faciliten el aprendizaje bilingüe.','Descripción de infraestructura conforme al Art. 138 de la Ley 115 de 1994.','Inventario organizado con soportes verificables.'],status:'pending',pct:0,obs:''},
+  {id:'examen',icon:'🎓',name:'Examen Internacional de Lengua',sub:'Certificación externa avalada por MEN como requisito de grado',desc:'Los graduados deben presentar un examen internacional de lengua avalado por el MEN.',items:['Seleccionar el examen según la Resolución 018035 de 2021 del MEN.','Establecerlo como requisito de grado con acta institucional que lo formalice.','Diseñar plan de preparación progresivo por habilidades comunicativas.','Decisiones curriculares basadas en resultados históricos de las pruebas.'],status:'pending',pct:0,obs:''},
+  {id:'intercultural',icon:'🌎',name:'Orientación Intercultural',sub:'Proyectos y actividades interculturales documentados con evidencias',desc:'Las instituciones BN deben evidenciar orientación intercultural activa y transversal.',items:['Promoción de visión intercultural que fortalezca la identidad nacional y global.','Actividades extracurriculares interculturales documentadas.','Proyectos interdisciplinarios de diversidad cultural.','Integración curricular de la interculturalidad como eje transversal.'],status:'pending',pct:0,obs:''},
+  {id:'socializacion',icon:'🤝',name:'Socialización con la Comunidad',sub:'Acta de Consejo Directivo + evidencias de socialización',desc:'La Circular exige que la decisión sea institucional, colectiva, informada y documentada.',items:['Acta del Consejo Directivo aprobando el modelo bilingüe con justificación.','Registro de participación e información a docentes, padres y estudiantes.','Carta formal dirigida a la Oficina de IVC de la Secretaría Distrital.','Actas, listas de asistencia, fotos y soportes de los espacios de socialización.'],status:'pending',pct:0,obs:''},
+  {id:'dossier',icon:'📁',name:'Dossier BN Final (Audit-Ready)',sub:'Expediente completo, organizado y listo para verificación oficial',desc:'El dossier integra todos los documentos y evidencias. Debe estar listo para la visita de verificación oficial.',items:['Repositorio de evidencias con nomenclatura, índice y control de versiones.','Checklist de cumplimiento de la Circular 00009 completamente verificado.','Simulacro de verificación (walkthrough) completado.','Radicación formal ante la Secretaría Distrital de Educación.'],status:'pending',pct:0,obs:''}
+];
+
+// ── AUTH ──
+async function init(){
+  const stored=localStorage.getItem('bn_user_email');
+  if(stored){
+    const ok=await loadUser(stored);
+    if(ok){showApp();return;}
+  }
+  showLogin();
+}
+
+function showLogin(){
+  document.getElementById('loading-screen').style.display='none';
+  const ls=document.getElementById('login-screen');
+  ls.style.display='flex';
+  ls.style.flexDirection='column';
+  ls.style.alignItems='center';
+  ls.style.justifyContent='center';
+  ls.style.minHeight='100vh';
+  ls.style.background='linear-gradient(135deg,#0A2D73 0%,#0e3680 55%,#197AA4 100%)';
+  ls.style.padding='24px';
+  ls.innerHTML=`
+    <div class="login-card">
+      <img src="data:image/png;base64,${LOGO_B64}" class="login-logo" alt="CAB"/>
+      <h2>Colegio Americano de Barranquilla</h2>
+      <p>Tablero BN 2026 · Ingresa con tu email institucional</p>
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="login-btn" onclick="doLogin()">Ingresar al Tablero</button>
+      <div class="login-error" id="login-error">Email no registrado. Contacta a Yuddy Pérez.</div>
+    </div>`;
+}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  if(!email)return;
+  const ok=await loadUser(email);
+  if(ok){localStorage.setItem('bn_user_email',email);showApp();}
+  else{document.getElementById('login-error').style.display='block';}
+}
+
+async function loadUser(email){
+  const {data,error}=await sb.from('usuarios').select('*').eq('email',email.toLowerCase()).single();
+  if(error||!data)return false;
+  currentUser=data;
+  isLider=data.rol==='lider';
+  return true;
+}
+
+function logout(){
+  localStorage.removeItem('bn_user_email');
+  currentUser=null;isLider=false;
+  document.getElementById('app').style.display='none';
+  showLogin();
+}
+
+async function showApp(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('app-logo').src='data:image/png;base64,'+LOGO_B64;
+  document.getElementById('user-name-display').textContent=currentUser.nombre;
+  if(!isLider)document.getElementById('readonly-banner').style.display='block';
+  await loadData();
+  renderReqs();updateStats();
+  setTimeout(()=>{updateTlLine();},400);
+  // Real-time subscriptions
+  sb.channel('tablero').on('postgres_changes',{event:'*',schema:'public',table:'requisitos'},()=>loadData().then(()=>{renderReqs();updateStats();})).on('postgres_changes',{event:'*',schema:'public',table:'phase_checks'},()=>loadChecks().then(()=>{if(document.getElementById('drawer').classList.contains('open'))renderDrawer(activePhase);})).subscribe();
+}
+
+// ── DATA ──
+async function loadData(){
+  await loadReqs();
+  await loadChecks();
+}
+
+async function loadReqs(){
+  const {data}=await sb.from('requisitos').select('*');
+  if(data)data.forEach(row=>{const r=REQS.find(x=>x.id===row.id);if(r){r.status=row.status;r.pct=row.pct;r.obs=row.obs||'';}});
+}
+
+async function loadChecks(){
+  const {data}=await sb.from('phase_checks').select('*');
+  phaseChecks={};
+  if(data)data.forEach(row=>{
+    if(!phaseChecks[row.phase_idx])phaseChecks[row.phase_idx]={act:{},del:{}};
+    phaseChecks[row.phase_idx][row.list_type][row.item_idx]=row.checked;
+  });
+  PHASES.forEach((_,i)=>{if(!phaseChecks[i])phaseChecks[i]={act:{},del:{}};});
+}
+
+// ── RENDER ──
+function renderReqs(){
+  document.getElementById('req-grid').innerHTML=REQS.map(r=>{
+    const sc=r.status==='done'?'done':r.status==='progress'?'progress':'';
+    const cc=r.status==='done'?'chip-done':r.status==='progress'?'chip-progress':'chip-pending';
+    const cl=r.status==='done'?'✅ Completado':r.status==='progress'?'🔄 En progreso':'⏳ Pendiente';
+    const fc=r.status==='done'?'fill-done':r.status==='progress'?'fill-progress':'fill-pending';
+    const editClass=isLider?' editable':'';
+    const clickFn=isLider?`onclick="openModal('${r.id}')"`:''
+    return `<div class="req-card${editClass} ${sc}" ${clickFn}>
+      <div class="req-header"><div style="font-size:1.5rem;flex-shrink:0">${r.icon}</div>
+        <div><div class="req-name">${r.name}</div><div class="req-sub">${r.sub}</div></div>
+      </div>
+      <span class="chip ${cc}">${cl}</span>
+      <div class="pbar-bg"><div class="pbar-fill ${fc}" style="width:${r.pct}%"></div></div>
+      <div class="req-foot"><span style="color:var(--gray)">Avance</span><span style="font-weight:700;color:var(--navy)">${r.pct}%</span></div>
+      ${r.obs?`<div class="req-obs">💬 ${r.obs}</div>`:''}
+      ${isLider?`<div style="margin-top:6px;font-size:0.65rem;color:var(--teal);font-weight:600">🖊 Clic para actualizar avance</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function updateStats(){
+  const done=REQS.filter(r=>r.status==='done').length;
+  const prog=REQS.filter(r=>r.status==='progress').length;
+  const pend=REQS.filter(r=>r.status==='pending').length;
+  document.getElementById('stat-done').textContent=done;
+  document.getElementById('stat-prog').textContent=prog;
+  document.getElementById('stat-pend').textContent=pend;
+  const p=Math.round(REQS.reduce((a,r)=>a+r.pct,0)/REQS.length);
+  document.getElementById('main-fill').style.width=p+'%';
+  document.getElementById('main-pct').textContent=p+'%';
+  updateTlLine();
+  if(p>10){
+    const set=(id,w,cnt)=>{document.getElementById(id).style.width=Math.min(w,100)+'%';document.getElementById(cnt).textContent=Math.floor(w/10)+' doc.';};
+    set('bar-c1',p*.4,'cnt-c1');set('bar-b2',p*.6,'cnt-b2');set('bar-b1',p*.3,'cnt-b1');
+  }
+}
+
+function updateTlLine(){
+  const p=Math.round(REQS.reduce((a,r)=>a+r.pct,0)/REQS.length);
+  const tl=document.getElementById('tl-line');
+  if(tl)tl.style.width='calc('+p+'% * 0.88)';
+}
+
+// ── PHASES ──
+function setPhase(idx){
+  activePhase=idx;
+  document.querySelectorAll('.phase-btn').forEach((b,i)=>{b.classList.remove('active','done');if(i<idx)b.classList.add('done');else if(i===idx)b.classList.add('active');});
+  ['tl0','tl1','tl2','tl3','tl4'].forEach((id,i)=>{const d=document.getElementById(id);d.className='tl-dot'+(i<idx?' done':i===idx?' active':'');});
+  ['tll0','tll1','tll2','tll3','tll4'].forEach((id,i)=>{const l=document.getElementById(id);l.className='tl-label'+(i<idx?' done':i===idx?' active':'');});
+}
+
+function clickTl(idx){
+  setPhase(idx);
+  renderDrawer(idx);
+  const d=document.getElementById('drawer');
+  d.classList.remove('open');void d.offsetHeight;d.classList.add('open');
+  d.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');}
+
+function phaseProgress(idx){
+  const p=PHASES[idx],c=phaseChecks[idx]||{act:{},del:{}};
+  const dA=p.act.filter((_,i)=>c.act[i]).length;
+  const dD=p.del.filter((_,i)=>c.del[i]).length;
+  const total=p.act.length+p.del.length,done=dA+dD;
+  return{total,done,pct:total?Math.round(100*done/total):0,dA,tA:p.act.length,dD,tD:p.del.length};
+}
+
+async function toggleCheck(pi,type,ii){
+  if(!isLider)return;
+  if(!phaseChecks[pi])phaseChecks[pi]={act:{},del:{}};
+  const newVal=!phaseChecks[pi][type][ii];
+  phaseChecks[pi][type][ii]=newVal;
+  await sb.from('phase_checks').upsert({phase_idx:pi,list_type:type,item_idx:ii,checked:newVal,updated_by:currentUser.email},{onConflict:'phase_idx,list_type,item_idx'});
+  renderDrawer(pi);
+  const pg=phaseProgress(pi);
+  if(pg.pct===100)celebrate(pi);
+}
+
+function celebrate(pi){
+  const d=document.getElementById('drawer');
+  d.style.transition='box-shadow .3s';
+  d.style.boxShadow='0 0 0 4px #EC8906,0 8px 24px rgba(236,137,6,0.35)';
+  setTimeout(()=>{d.style.boxShadow='';d.style.transition='';},1800);
+  showToast('🎉 ¡'+PHASES[pi].name+' completada!');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);
+}
+
+function renderDrawer(idx){
+  const p=PHASES[idx],c=phaseChecks[idx]||{act:{},del:{}};
+  const pg=phaseProgress(idx);
+  const r=pg.pct;
+  const editClass=isLider?' editable':'';
+  const actH=p.act.map((a,i)=>{const done=!!c.act[i];return`<li class="check-item${editClass}${done?' checked':''}" ${isLider?`onclick="toggleCheck(${idx},'act',${i})"`:''}>
+    <div class="cb">${done?'✓':''}</div><div class="check-text">${a}</div></li>`;}).join('');
+  const delH=p.del.map((d,i)=>{const done=!!c.del[i];return`<li class="check-item del-item${editClass}${done?' checked':''}" ${isLider?`onclick="toggleCheck(${idx},'del',${i})"`:''}>
+    <div class="cb">${done?'✓':''}</div><div class="check-text">${d}</div></li>`;}).join('');
+  document.getElementById('drawer-content').innerHTML=`
+    <div class="drawer-header">
+      <div class="drawer-icon">${p.icon}</div>
+      <div style="flex:1"><div class="drawer-title">${p.name}${r===100?' 🏆':''}</div><div class="drawer-obj">${p.obj}</div></div>
+      <div style="text-align:center;flex-shrink:0;margin-left:12px">
+        <svg viewBox="0 0 36 36" width="52" height="52">
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/>
+          <circle cx="18" cy="18" r="15.9" fill="none" stroke="${r===100?'#EC8906':'rgba(236,137,6,0.85)'}"
+            stroke-width="3" stroke-dasharray="${r} ${100-r}" stroke-dashoffset="25" stroke-linecap="round"/>
+          <text x="18" y="22" text-anchor="middle" font-size="8" font-weight="bold" fill="white" font-family="Tahoma,sans-serif">${r}%</text>
+        </svg>
+        <div style="font-size:0.6rem;color:rgba(255,255,255,0.5);margin-top:1px">${pg.done}/${pg.total}</div>
+      </div>
+    </div>
+    <div class="drawer-cols">
+      <div><div class="drawer-col-title act">▸ Actividades clave (${pg.dA}/${pg.tA})</div><ul class="check-list">${actH}</ul></div>
+      <div><div class="drawer-col-title del">✓ Entregables verificables (${pg.dD}/${pg.tD})</div><ul class="check-list">${delH}</ul></div>
+    </div>
+    ${!isLider?'<div class="readonly-note">Solo Yuddy Pérez puede marcar actividades como completadas.</div>':''}`;
+}
+
+// ── MODAL ──
+function openModal(id){
+  if(!isLider)return;
+  editingId=id;const r=REQS.find(x=>x.id===id);
+  document.getElementById('m-title').textContent=r.icon+' '+r.name;
+  document.getElementById('m-sub').textContent=r.sub;
+  document.getElementById('m-desc').innerHTML=`<h4>📋 ¿En qué consiste?</h4><p>${r.desc}</p><ul class="desc-items">${r.items.map(it=>`<li>${it}</li>`).join('')}</ul>`;
+  document.getElementById('m-status').value=r.status;
+  document.getElementById('m-pct').value=String(r.pct);
+  document.getElementById('m-obs').value=r.obs||'';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('open');editingId=null;}
+function handleOverlay(e){if(e.target.id==='modal-overlay')closeModal();}
+
+async function saveModal(){
+  const r=REQS.find(x=>x.id===editingId);
+  r.status=document.getElementById('m-status').value;
+  r.pct=parseInt(document.getElementById('m-pct').value);
+  r.obs=document.getElementById('m-obs').value;
+  if(r.status==='done')r.pct=100;
+  if(r.status==='pending')r.pct=0;
+  await sb.from('requisitos').upsert({id:r.id,status:r.status,pct:r.pct,obs:r.obs,updated_at:new Date().toISOString(),updated_by:currentUser.email},{onConflict:'id'});
+  closeModal();renderReqs();updateStats();
+  showToast('✅ Avance guardado correctamente');
+}
+
+init();
+</script>
+</body>
+</html>
